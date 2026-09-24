@@ -33,6 +33,10 @@ jobs:
         run: |
           uv run ruff check .
 
+      - name: Format
+        run: |
+          uv run ruff format --check .          
+
       - name: Test
         run: |
-          uv run pytest -q --suppress-no-test-exit-code
+          uv run pytest --suppress-no-test-exit-code

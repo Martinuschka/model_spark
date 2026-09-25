@@ -10,6 +10,7 @@ import pytest
 
 from model_spark.main import (
     _data_kind,
+    _infer_task,
     _metadata,
     _read_csv,
     _read_metadata,
@@ -108,6 +109,35 @@ class TestDataKind:
 
         series = pd.Series(["a", None, "c", "a"])
         assert _data_kind(series) == "categorical"
+
+
+class TestInferTask:
+    """Tests for _infer_task function."""
+
+    def test_binary_for_two_class_categorical(self) -> None:
+        """Two-class categorical targets infer binary."""
+        series = pd.Series(["yes", "no", "yes", "no"])
+        assert _infer_task(series) == "binary"
+
+    def test_binary_for_boolean(self) -> None:
+        """Boolean targets infer binary."""
+        series = pd.Series([True, False, True, False])
+        assert _infer_task(series) == "binary"
+
+    def test_multiclass_for_many_class_categorical(self) -> None:
+        """Categorical targets with 3+ classes infer multiclass."""
+        series = pd.Series(["a", "b", "c", "a", "b"])
+        assert _infer_task(series) == "multiclass"
+
+    def test_regression_for_numeric(self) -> None:
+        """Numeric targets infer regression."""
+        series = pd.Series([1.1, 2.2, 3.3, 4.4])
+        assert _infer_task(series) == "regression"
+
+    def test_nulls_ignored_for_class_count(self) -> None:
+        """Nulls do not count toward class cardinality."""
+        series = pd.Series(["yes", None, "no", "yes"])
+        assert _infer_task(series) == "binary"
 
 
 class TestMetadata:

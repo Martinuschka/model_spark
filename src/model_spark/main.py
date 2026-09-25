@@ -69,6 +69,13 @@ def _data_kind(series: pd.Series) -> str:
     return "other"
 
 
+def _infer_task(series: pd.Series) -> str:
+    """Infer an AutoGluon problem_type from the target column."""
+    if _data_kind(series) == "categorical":
+        return "binary" if series.nunique(dropna=True) <= 2 else "multiclass"
+    return "regression"
+
+
 def _show_data(frame: pd.DataFrame) -> None:
     table = Table(
         title=f"Data preview ({len(frame):,} rows × {len(frame.columns)} columns)"
@@ -168,7 +175,7 @@ def _train(
         raise ValueError(
             "At least ten labeled rows are required for AutoGluon training."
         )
-    if task == "classification" and data[target].nunique() < 2:
+    if task in {"binary", "multiclass"} and data[target].nunique() < 2:
         raise ValueError("Classification requires at least two target classes.")
     if task == "regression" and not pd.api.types.is_numeric_dtype(data[target]):
         raise ValueError("Regression requires a numeric target column.")
@@ -206,11 +213,10 @@ def train_workflow() -> None:
     target = Prompt.ask(
         "Target column", choices=[str(column) for column in frame.columns]
     )
-    inferred = (
-        "classification" if _data_kind(frame[target]) == "categorical" else "regression"
-    )
     task = Prompt.ask(
-        "Task type", choices=["binary", "multiclass", "regression"], default=inferred
+        "Task type",
+        choices=["binary", "multiclass", "regression"],
+        default=_infer_task(frame[target]),
     )
     time_limit = IntPrompt.ask("Maximum training time in seconds", default=300)
     default_path = f"{target}_autogluon_model"

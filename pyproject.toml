@@ -6,11 +6,12 @@ readme = "README.md"
 authors = [
     { name = "Martinuschka", email = "95043342+Martinuschka@users.noreply.github.com" }
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.13"
 dependencies = [
-    "autogluon.tabular>=1.4.0",
-    "pandas>=2.2.3",
-    "rich>=13.9.4",
+    "autogluon.tabular>=1.4.0,<1.5.0",
+    "numpy>=1.26.0,<2.0",
+    "pandas>=2.1.0,<2.3.0",
+    "rich>=13.9.4,<14.0.0",
 ]
 
 [project.scripts]

@@ -28,7 +28,7 @@ The output is a model directory, not a single `.joblib` file. Model directories 
 ## Predict
 
 1. Select a saved model directory.
-2. Provide a CSV/TSV with the same feature columns used during training (omit the target column).
+2. Provide a CSV/TSV with the same feature columns used during training (***omit the target column***).
 3. `model_spark` validates:
    - missing or unexpected columns
    - feature order
@@ -42,8 +42,6 @@ New categorical values are allowed during prediction; structural mismatches and 
 
 - Best for local tabular data files
 - Training can be slow and memory-intensive on large datasets
-- CPU use only
 - Saved AutoGluon models are directories and can take significant disk space
-- AutoGluon 1.4 supports Python 3.10–3.12
 
-> AutoGluon 1.4 is compatible with Python 3.10–3.12. This project pins Python to that supported range to avoid dependency resolution issues with newer Python versions.
+> CPU use only!

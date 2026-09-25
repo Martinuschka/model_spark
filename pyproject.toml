@@ -8,7 +8,7 @@ authors = [
 ]
 requires-python = ">=3.10,<3.13"
 dependencies = [
-    "autogluon-tabular[catboost,lightgbm,xgboost,fastai]>=1.4.0,<1.5.0",
+    "autogluon-tabular[catboost,lightgbm,xgboost,fastai]>=1.5.0,<1.6.0",
     "numpy>=1.26.0,<2.0",
     "pandas>=2.1.0,<2.3.0",
     "rich>=13.9.4,<14.0.0",

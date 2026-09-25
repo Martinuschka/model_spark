@@ -1,13 +1,18 @@
 [project]
 name = "model-spark"
 version = "0.1.0"
-description = "Add your description here"
+description = "An interactive Rich CLI for AutoML on local tabular data"
 readme = "README.md"
 authors = [
     { name = "Martinuschka", email = "95043342+Martinuschka@users.noreply.github.com" }
 ]
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "joblib>=1.4.2",
+    "pandas>=2.2.3",
+    "rich>=13.9.4",
+    "scikit-learn>=1.6.1",
+]
 
 [project.scripts]
 model_spark = "model_spark.main:run"

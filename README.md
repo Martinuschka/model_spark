@@ -1,6 +1,6 @@
 # model_spark
 
-A streamlined interactive CLI to train and use machine-learning models on local tabular data.
+An interactive CLI for AutoML on local tabular data, powered by [AutoGluon Tabular](https://auto.gluon.ai/stable/tutorials/tabular/index.html).
 
 ## Usage
 
@@ -9,9 +9,20 @@ uv sync
 uv run model_spark
 ```
 
-The CLI supports two workflows:
+### Train
 
-- **Train**: select a CSV/TSV file, preview its columns and missing values, choose a target, and let model_spark compare a linear model with a random forest. The best pipeline is validated, retrained on all labeled rows, and saved as a `.joblib` model.
-- **Predict**: load a saved model and a CSV/TSV file. The CLI verifies that feature names, data kinds, and categorical values match the training data before writing predictions to a new CSV.
+Choose `train`, provide a local CSV or TSV file, select the target and task type, then set a training time limit. AutoGluon searches across multiple tabular model families and creates ensembles instead of this application manually comparing a few sklearn estimators. The resulting model is stored as an AutoGluon model directory, for example `target_autogluon_model/`.
 
-Models include preprocessing (missing-value handling, scaling, and categorical encoding), so the prediction workflow can use the saved artifact without additional setup. Never load model files from untrusted sources because joblib uses pickle internally.
+### Predict
+
+Choose `predict`, load the saved model directory, and provide a CSV/TSV containing the feature columns. Before prediction, model_spark checks:
+
+- missing and unexpected columns,
+- feature order,
+- numeric versus categorical feature kinds.
+
+Predictions are written to a new CSV file. New categorical values are allowed because AutoGluon handles categorical feature processing; structural and type mismatches are rejected.
+
+AutoGluon models are directories rather than single `.joblib` files and can be large. Training time and resource usage depend on the dataset and selected time limit. The model directory contains serialized artifacts; only load models from trusted sources.
+
+> AutoGluon currently has platform and Python-version-specific dependencies. If `uv sync` cannot resolve the environment, use a Python version supported by the installed AutoGluon release (typically Python 3.10–3.13) rather than forcing Python 3.14.

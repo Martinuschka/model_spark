@@ -1,17 +1,16 @@
 [project]
 name = "model-spark"
 version = "0.1.0"
-description = "An interactive Rich CLI for AutoML on local tabular data"
+description = "An interactive Rich CLI powered by AutoGluon tabular AutoML"
 readme = "README.md"
 authors = [
     { name = "Martinuschka", email = "95043342+Martinuschka@users.noreply.github.com" }
 ]
-requires-python = ">=3.14"
+requires-python = ">=3.10"
 dependencies = [
-    "joblib>=1.4.2",
+    "autogluon.tabular>=1.4.0",
     "pandas>=2.2.3",
     "rich>=13.9.4",
-    "scikit-learn>=1.6.1",
 ]
 
 [project.scripts]

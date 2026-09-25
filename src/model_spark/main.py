@@ -19,6 +19,19 @@ _METADATA_FILE = "model_spark_metadata.json"
 
 
 def print_banner() -> None:
+    print(
+        r"""
+        ╔═══════════════════════════════╗
+        ║                               ║
+        ║      ███████████████████      ║
+        ║      █     █     █     █      ║
+        ║      █     █     ███████      ║
+        ║      █     █     █     █      ║
+        ║                               ║
+        ╚═══════════════════════════════╝
+        """
+    )
+
     console.print(
         Panel.fit(
             "[bold cyan]model_spark[/bold cyan]\n[dim]AutoGluon tabular AutoML — ignite your model![/dim]",
@@ -51,7 +64,9 @@ def _data_kind(series: pd.Series) -> str:
 
 
 def _show_data(frame: pd.DataFrame) -> None:
-    table = Table(title=f"Data preview ({len(frame):,} rows × {len(frame.columns)} columns)")
+    table = Table(
+        title=f"Data preview ({len(frame):,} rows × {len(frame.columns)} columns)"
+    )
     table.add_column("Column", style="cyan")
     table.add_column("Type")
     table.add_column("Missing")
@@ -59,11 +74,18 @@ def _show_data(frame: pd.DataFrame) -> None:
     for name in frame.columns:
         values = frame[name].dropna()
         example = "" if values.empty else str(values.iloc[0])
-        table.add_row(name, str(frame[name].dtype), str(int(frame[name].isna().sum())), example[:40])
+        table.add_row(
+            name,
+            str(frame[name].dtype),
+            str(int(frame[name].isna().sum())),
+            example[:40],
+        )
     console.print(table)
 
 
-def _metadata(frame: pd.DataFrame, target: str, task: str, model_path: Path) -> dict[str, Any]:
+def _metadata(
+    frame: pd.DataFrame, target: str, task: str, model_path: Path
+) -> dict[str, Any]:
     features = frame.drop(columns=[target])
     return {
         "format_version": 2,
@@ -71,7 +93,9 @@ def _metadata(frame: pd.DataFrame, target: str, task: str, model_path: Path) -> 
         "target": target,
         "task": task,
         "feature_columns": list(features.columns),
-        "feature_kinds": {column: _data_kind(features[column]) for column in features.columns},
+        "feature_kinds": {
+            column: _data_kind(features[column]) for column in features.columns
+        },
         "training_rows": len(frame),
         "model_path": str(model_path),
     }
@@ -79,13 +103,17 @@ def _metadata(frame: pd.DataFrame, target: str, task: str, model_path: Path) -> 
 
 def _write_metadata(model_path: Path, metadata: dict[str, Any]) -> None:
     model_path.mkdir(parents=True, exist_ok=True)
-    (model_path / _METADATA_FILE).write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+    (model_path / _METADATA_FILE).write_text(
+        json.dumps(metadata, indent=2), encoding="utf-8"
+    )
 
 
 def _read_metadata(model_path: Path) -> dict[str, Any]:
     metadata_path = model_path / _METADATA_FILE
     if not metadata_path.is_file():
-        raise ValueError(f"'{model_path}' is not a model_spark AutoGluon model directory.")
+        raise ValueError(
+            f"'{model_path}' is not a model_spark AutoGluon model directory."
+        )
     try:
         metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as error:
@@ -106,32 +134,46 @@ def _validate_input(frame: pd.DataFrame, metadata: dict[str, Any]) -> pd.DataFra
             details.append(f"missing columns: {', '.join(missing)}")
         if extra:
             details.append(f"unexpected columns: {', '.join(extra)}")
-        raise ValueError("Input data does not match the trained model (" + "; ".join(details) + ").")
+        raise ValueError(
+            "Input data does not match the trained model (" + "; ".join(details) + ")."
+        )
 
     mismatches = []
     for column, expected_kind in metadata["feature_kinds"].items():
         actual_kind = _data_kind(frame[column])
         if actual_kind != expected_kind:
-            mismatches.append(f"{column}: expected {expected_kind}, received {actual_kind}")
+            mismatches.append(
+                f"{column}: expected {expected_kind}, received {actual_kind}"
+            )
     if mismatches:
-        raise ValueError("Input data has incompatible column types: " + "; ".join(mismatches))
+        raise ValueError(
+            "Input data has incompatible column types: " + "; ".join(mismatches)
+        )
     return frame[expected].copy()
 
 
-def _train(frame: pd.DataFrame, target: str, task: str, model_path: Path, time_limit: int) -> tuple[TabularPredictor, dict[str, Any]]:
+def _train(
+    frame: pd.DataFrame, target: str, task: str, model_path: Path, time_limit: int
+) -> tuple[TabularPredictor, dict[str, Any]]:
     if frame[target].isna().all():
         raise ValueError("The target column contains no usable values.")
     data = frame.dropna(subset=[target]).copy()
     if len(data) < 10:
-        raise ValueError("At least ten labeled rows are required for AutoGluon training.")
+        raise ValueError(
+            "At least ten labeled rows are required for AutoGluon training."
+        )
     if task == "classification" and data[target].nunique() < 2:
         raise ValueError("Classification requires at least two target classes.")
     if task == "regression" and not pd.api.types.is_numeric_dtype(data[target]):
         raise ValueError("Regression requires a numeric target column.")
 
     predictor = TabularPredictor(label=target, problem_type=task, path=str(model_path))
-    with Progress(SpinnerColumn(), TextColumn("{task.description}"), console=console) as progress:
-        progress.add_task("AutoGluon is searching, training, and ensembling models...", total=None)
+    with Progress(
+        SpinnerColumn(), TextColumn("{task.description}"), console=console
+    ) as progress:
+        progress.add_task(
+            "AutoGluon is searching, training, and ensembling models...", total=None
+        )
         predictor.fit(
             train_data=data,
             presets="medium_quality",
@@ -140,8 +182,14 @@ def _train(frame: pd.DataFrame, target: str, task: str, model_path: Path, time_l
         )
     metadata = _metadata(data, target, task, model_path)
     leaderboard = predictor.leaderboard(data, silent=True)
-    metadata["best_model"] = str(leaderboard.iloc[0]["model"]) if not leaderboard.empty else "AutoGluon ensemble"
-    metadata["validation_score"] = float(leaderboard.iloc[0]["score_val"]) if not leaderboard.empty else None
+    metadata["best_model"] = (
+        str(leaderboard.iloc[0]["model"])
+        if not leaderboard.empty
+        else "AutoGluon ensemble"
+    )
+    metadata["validation_score"] = (
+        float(leaderboard.iloc[0]["score_val"]) if not leaderboard.empty else None
+    )
     _write_metadata(model_path, metadata)
     return predictor, metadata
 
@@ -149,25 +197,42 @@ def _train(frame: pd.DataFrame, target: str, task: str, model_path: Path, time_l
 def train_workflow() -> None:
     frame = _read_csv(Prompt.ask("Path to training CSV/TSV"))
     _show_data(frame)
-    target = Prompt.ask("Target column", choices=[str(column) for column in frame.columns])
-    inferred = "classification" if _data_kind(frame[target]) == "categorical" else "regression"
-    task = Prompt.ask("Task type", choices=["binary", "multiclass", "regression"], default=inferred)
+    target = Prompt.ask(
+        "Target column", choices=[str(column) for column in frame.columns]
+    )
+    inferred = (
+        "classification" if _data_kind(frame[target]) == "categorical" else "regression"
+    )
+    task = Prompt.ask(
+        "Task type", choices=["binary", "multiclass", "regression"], default=inferred
+    )
     time_limit = IntPrompt.ask("Maximum training time in seconds", default=300)
     default_path = f"{target}_autogluon_model"
-    model_path = Path(Prompt.ask("Output model directory", default=default_path)).expanduser()
-    if model_path.exists() and any(model_path.iterdir()):
-        if not Confirm.ask(f"'{model_path}' is not empty. Replace it?", default=False):
-            return
+    model_path = Path(
+        Prompt.ask("Output model directory", default=default_path)
+    ).expanduser()
+    if (
+        model_path.exists()
+        and any(model_path.iterdir())
+        and not Confirm.ask(f"'{model_path}' is not empty. Replace it?", default=False)
+    ):
+        return
     predictor, metadata = _train(frame, target, task, model_path, time_limit)
     score = metadata.get("validation_score")
     score_text = "unavailable" if score is None else f"{score:.3f}"
-    console.print(f"[bold green]AutoGluon selected:[/bold green] {metadata['best_model']} (validation score: {score_text})")
+    console.print(
+        f"[bold green]AutoGluon selected:[/bold green] {metadata['best_model']} (validation score: {score_text})"
+    )
     console.print(f"[green]Saved model directory to {model_path}[/green]")
-    console.print(f"[dim]AutoGluon summary: {predictor.fit_summary(verbosity=0).get('num_bag_folds', 0)} bag folds[/dim]")
+    console.print(
+        f"[dim]AutoGluon summary: {predictor.fit_summary(verbosity=0).get('num_bag_folds', 0)} bag folds[/dim]"
+    )
 
 
 def predict_workflow() -> None:
-    model_path = Path(Prompt.ask("Path to stored AutoGluon model directory")).expanduser()
+    model_path = Path(
+        Prompt.ask("Path to stored AutoGluon model directory")
+    ).expanduser()
     metadata = _read_metadata(model_path)
     predictor = TabularPredictor.load(str(model_path))
     frame = _read_csv(Prompt.ask("Path to prediction CSV/TSV"))
@@ -175,7 +240,9 @@ def predict_workflow() -> None:
     predictions = predictor.predict(features)
     output = frame.copy()
     output["prediction"] = predictions.to_numpy()
-    destination = Path(Prompt.ask("Output CSV path", default="predictions.csv")).expanduser()
+    destination = Path(
+        Prompt.ask("Output CSV path", default="predictions.csv")
+    ).expanduser()
     output.to_csv(destination, index=False)
     console.print(f"[green]Wrote {len(output):,} predictions to {destination}[/green]")
 
@@ -183,7 +250,11 @@ def predict_workflow() -> None:
 def run() -> None:
     print_banner()
     while True:
-        choice = Prompt.ask("What would you like to do?", choices=["train", "predict", "quit"], default="train")
+        choice = Prompt.ask(
+            "What would you like to do?",
+            choices=["train", "predict", "quit"],
+            default="train",
+        )
         try:
             if choice == "train":
                 train_workflow()

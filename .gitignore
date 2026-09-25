@@ -1,52 +1,19 @@
-# Python
+# Python-generated files
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-
-# Distribution / packaging
+*.py[oc]
 build/
 dist/
-*.egg-info/
-.eggs/
-
-# uv
-.venv/
-uv.lock.bak
-
-# Environments
-.env
-.env.*
-!.env.example
+wheels/
+*.egg-info
 
 # Virtual environments
-venv/
-env/
-ENV/
-
-# Testing / Coverage
-.pytest_cache/
-.coverage
-.coverage.*
-htmlcov/
-.tox/
-
-# Type checking / Linting caches
-.mypy_cache/
-.ruff_cache/
-.pytype/
-
-# Jupyter
-.ipynb_checkpoints/
+.venv
 
 # IDE
-.vscode/
 .idea/
-*.swp
 
-# OS
-.DS_Store
-Thumbs.db
+# Cursor
+.cursor/
 
-# Logs
-*.log
+# Testing
+.pytest_cache/

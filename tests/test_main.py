@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import tempfile
 from pathlib import Path
 
 import pandas as pd
@@ -26,9 +25,9 @@ class TestReadCsv:
         """Test reading a valid CSV file."""
         csv_file = tmp_path / "data.csv"
         csv_file.write_text("col1,col2,col3\n1,2,3\n4,5,6\n")
-        
+
         df = _read_csv(str(csv_file))
-        
+
         assert df.shape == (2, 3)
         assert list(df.columns) == ["col1", "col2", "col3"]
 
@@ -36,9 +35,9 @@ class TestReadCsv:
         """Test reading a valid TSV file."""
         tsv_file = tmp_path / "data.tsv"
         tsv_file.write_text("col1\tcol2\tcol3\n1\t2\t3\n4\t5\t6\n")
-        
+
         df = _read_csv(str(tsv_file))
-        
+
         assert df.shape == (2, 3)
         assert list(df.columns) == ["col1", "col2", "col3"]
 
@@ -51,7 +50,7 @@ class TestReadCsv:
         """Test reading an empty CSV raises ValueError."""
         csv_file = tmp_path / "empty.csv"
         csv_file.write_text("")
-        
+
         with pytest.raises(ValueError, match="at least two columns"):
             _read_csv(str(csv_file))
 
@@ -59,7 +58,7 @@ class TestReadCsv:
         """Test reading a CSV with single column raises ValueError."""
         csv_file = tmp_path / "single.csv"
         csv_file.write_text("col1\n1\n2\n")
-        
+
         with pytest.raises(ValueError, match="at least two columns"):
             _read_csv(str(csv_file))
 
@@ -68,7 +67,7 @@ class TestReadCsv:
         csv_file = tmp_path / "data.csv"
         csv_file.write_text("col1,col2\n1,2\n")
         monkeypatch.setenv("HOME", str(tmp_path.parent))
-        
+
         # This will fail if expanduser is not working, but tests the mechanism
         with pytest.raises(FileNotFoundError):
             _read_csv("~/nonexistent.csv")
@@ -106,7 +105,7 @@ class TestDataKind:
         """Test that null values don't affect detection."""
         series = pd.Series([1, 2, None, 4, 5])
         assert _data_kind(series) == "numeric"
-        
+
         series = pd.Series(["a", None, "c", "a"])
         assert _data_kind(series) == "categorical"
 
@@ -116,15 +115,17 @@ class TestMetadata:
 
     def test_metadata_creation_regression(self, tmp_path: Path) -> None:
         """Test creating metadata for regression task."""
-        df = pd.DataFrame({
-            "feature1": [1, 2, 3, 4, 5],
-            "feature2": ["a", "b", "a", "b", "a"],
-            "target": [10.5, 20.3, 15.1, 25.0, 18.5]
-        })
+        df = pd.DataFrame(
+            {
+                "feature1": [1, 2, 3, 4, 5],
+                "feature2": ["a", "b", "a", "b", "a"],
+                "target": [10.5, 20.3, 15.1, 25.0, 18.5],
+            }
+        )
         model_path = tmp_path / "model"
-        
+
         metadata = _metadata(df, "target", "regression", model_path)
-        
+
         assert metadata["format_version"] == 2
         assert metadata["backend"] == "autogluon.tabular"
         assert metadata["target"] == "target"
@@ -137,14 +138,11 @@ class TestMetadata:
 
     def test_metadata_creation_classification(self, tmp_path: Path) -> None:
         """Test creating metadata for classification task."""
-        df = pd.DataFrame({
-            "feature1": [1.0, 2.0, 3.0],
-            "target": ["yes", "no", "yes"]
-        })
+        df = pd.DataFrame({"feature1": [1.0, 2.0, 3.0], "target": ["yes", "no", "yes"]})
         model_path = tmp_path / "model"
-        
+
         metadata = _metadata(df, "target", "binary", model_path)
-        
+
         assert metadata["task"] == "binary"
         assert metadata["training_rows"] == 3
 
@@ -156,9 +154,9 @@ class TestWriteMetadata:
         """Test that _write_metadata creates the model directory."""
         model_path = tmp_path / "new_model"
         metadata = {"test": "data", "version": 1}
-        
+
         _write_metadata(model_path, metadata)
-        
+
         assert model_path.exists()
         assert (model_path / "model_spark_metadata.json").exists()
 
@@ -166,9 +164,9 @@ class TestWriteMetadata:
         """Test that metadata is written correctly."""
         model_path = tmp_path / "model"
         metadata = {"format_version": 2, "backend": "autogluon.tabular"}
-        
+
         _write_metadata(model_path, metadata)
-        
+
         content = json.loads((model_path / "model_spark_metadata.json").read_text())
         assert content == metadata
 
@@ -183,19 +181,21 @@ class TestReadMetadata:
             "format_version": 2,
             "backend": "autogluon.tabular",
             "target": "target",
-            "task": "regression"
+            "task": "regression",
         }
         _write_metadata(model_path, metadata)
-        
+
         read_metadata = _read_metadata(model_path)
-        
+
         assert read_metadata == metadata
 
     def test_read_metadata_missing_file(self, tmp_path: Path) -> None:
         """Test reading metadata from nonexistent directory."""
         model_path = tmp_path / "nonexistent"
-        
-        with pytest.raises(ValueError, match="not a model_spark AutoGluon model directory"):
+
+        with pytest.raises(
+            ValueError, match="not a model_spark AutoGluon model directory"
+        ):
             _read_metadata(model_path)
 
     def test_read_metadata_invalid_json(self, tmp_path: Path) -> None:
@@ -203,7 +203,7 @@ class TestReadMetadata:
         model_path = tmp_path / "model"
         model_path.mkdir()
         (model_path / "model_spark_metadata.json").write_text("{ invalid json")
-        
+
         with pytest.raises(ValueError, match="not valid JSON"):
             _read_metadata(model_path)
 
@@ -212,7 +212,7 @@ class TestReadMetadata:
         model_path = tmp_path / "model"
         metadata = {"backend": "sklearn", "target": "target"}
         _write_metadata(model_path, metadata)
-        
+
         with pytest.raises(ValueError, match="not created with the AutoGluon backend"):
             _read_metadata(model_path)
 
@@ -222,17 +222,14 @@ class TestValidateInput:
 
     def test_validate_input_valid(self) -> None:
         """Test validation of valid input data."""
-        input_df = pd.DataFrame({
-            "feature1": [1, 2, 3],
-            "feature2": ["a", "b", "c"]
-        })
+        input_df = pd.DataFrame({"feature1": [1, 2, 3], "feature2": ["a", "b", "c"]})
         metadata = {
             "feature_columns": ["feature1", "feature2"],
-            "feature_kinds": {"feature1": "numeric", "feature2": "categorical"}
+            "feature_kinds": {"feature1": "numeric", "feature2": "categorical"},
         }
-        
+
         result = _validate_input(input_df, metadata)
-        
+
         assert result.shape == (3, 2)
         assert list(result.columns) == ["feature1", "feature2"]
 
@@ -241,52 +238,46 @@ class TestValidateInput:
         input_df = pd.DataFrame({"feature1": [1, 2, 3]})
         metadata = {
             "feature_columns": ["feature1", "feature2"],
-            "feature_kinds": {"feature1": "numeric", "feature2": "categorical"}
+            "feature_kinds": {"feature1": "numeric", "feature2": "categorical"},
         }
-        
+
         with pytest.raises(ValueError, match="missing columns"):
             _validate_input(input_df, metadata)
 
     def test_validate_input_extra_columns(self) -> None:
         """Test validation fails with extra columns."""
-        input_df = pd.DataFrame({
-            "feature1": [1, 2, 3],
-            "feature2": ["a", "b", "c"],
-            "extra": [10, 20, 30]
-        })
+        input_df = pd.DataFrame(
+            {"feature1": [1, 2, 3], "feature2": ["a", "b", "c"], "extra": [10, 20, 30]}
+        )
         metadata = {
             "feature_columns": ["feature1", "feature2"],
-            "feature_kinds": {"feature1": "numeric", "feature2": "categorical"}
+            "feature_kinds": {"feature1": "numeric", "feature2": "categorical"},
         }
-        
+
         with pytest.raises(ValueError, match="unexpected columns"):
             _validate_input(input_df, metadata)
 
     def test_validate_input_type_mismatch(self) -> None:
         """Test validation fails with type mismatch."""
-        input_df = pd.DataFrame({
-            "feature1": ["not", "numeric"],
-            "feature2": ["a", "b"]
-        })
+        input_df = pd.DataFrame(
+            {"feature1": ["not", "numeric"], "feature2": ["a", "b"]}
+        )
         metadata = {
             "feature_columns": ["feature1", "feature2"],
-            "feature_kinds": {"feature1": "numeric", "feature2": "categorical"}
+            "feature_kinds": {"feature1": "numeric", "feature2": "categorical"},
         }
-        
+
         with pytest.raises(ValueError, match="incompatible column types"):
             _validate_input(input_df, metadata)
 
     def test_validate_input_reorders_columns(self) -> None:
         """Test that validation reorders columns to match metadata."""
-        input_df = pd.DataFrame({
-            "feature2": ["a", "b"],
-            "feature1": [1, 2]
-        })
+        input_df = pd.DataFrame({"feature2": ["a", "b"], "feature1": [1, 2]})
         metadata = {
             "feature_columns": ["feature1", "feature2"],
-            "feature_kinds": {"feature1": "numeric", "feature2": "categorical"}
+            "feature_kinds": {"feature1": "numeric", "feature2": "categorical"},
         }
-        
+
         result = _validate_input(input_df, metadata)
-        
+
         assert list(result.columns) == ["feature1", "feature2"]

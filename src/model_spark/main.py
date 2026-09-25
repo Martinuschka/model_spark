@@ -45,21 +45,27 @@ def _read_csv(path: str) -> pd.DataFrame:
     if not file_path.is_file():
         raise FileNotFoundError(f"File does not exist: {file_path}")
     separator = "\t" if file_path.suffix.lower() == ".tsv" else ","
-    frame = pd.read_csv(file_path, sep=separator)
+    try:
+        frame = pd.read_csv(file_path, sep=separator)
+    except pd.errors.EmptyDataError as error:
+        raise ValueError(
+            "The data must contain at least two columns and one row."
+        ) from error
     if frame.empty or frame.shape[1] < 2:
         raise ValueError("The data must contain at least two columns and one row.")
     return frame
 
 
 def _data_kind(series: pd.Series) -> str:
-    if pd.api.types.is_numeric_dtype(series):
-        return "numeric"
+    # Bool is numeric in pandas, so check it before is_numeric_dtype.
     if (
         pd.api.types.is_bool_dtype(series)
         or pd.api.types.is_object_dtype(series)
         or isinstance(series.dtype, pd.CategoricalDtype)
     ):
         return "categorical"
+    if pd.api.types.is_numeric_dtype(series):
+        return "numeric"
     return "other"
 
 

@@ -14,6 +14,8 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.prompt import Confirm, IntPrompt, Prompt
 from rich.table import Table
 
+from model_spark.file_scanner import select_csv_file, select_model_directory
+
 console = Console()
 _METADATA_FILE = "model_spark_metadata.json"
 
@@ -208,7 +210,7 @@ def _train(
 
 
 def train_workflow() -> None:
-    frame = _read_csv(Prompt.ask("Path to training CSV/TSV"))
+    frame = _read_csv(select_csv_file())
     _show_data(frame)
     target = Prompt.ask(
         "Target column", choices=[str(column) for column in frame.columns]
@@ -242,12 +244,10 @@ def train_workflow() -> None:
 
 
 def predict_workflow() -> None:
-    model_path = Path(
-        Prompt.ask("Path to stored AutoGluon model directory")
-    ).expanduser()
+    model_path = Path(select_model_directory()).expanduser()
     metadata = _read_metadata(model_path)
     predictor = TabularPredictor.load(str(model_path))
-    frame = _read_csv(Prompt.ask("Path to prediction CSV/TSV"))
+    frame = _read_csv(select_csv_file())
     features = _validate_input(frame, metadata)
     predictions = predictor.predict(features)
     output = frame.copy()
